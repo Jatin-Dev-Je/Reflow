@@ -1,0 +1,65 @@
+name: reflow
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: reflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: reflow
+      POSTGRES_PASSWORD: reflow
+      POSTGRES_DB: reflow
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/sql/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reflow -d reflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: reflow-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional: Langfuse for LLM observability (self-hosted)
+  # Uncomment when you want LLM tracing in dev.
+  # langfuse-db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: langfuse
+  #     POSTGRES_PASSWORD: langfuse
+  #     POSTGRES_DB: langfuse
+  #   volumes:
+  #     - langfuse_db_data:/var/lib/postgresql/data
+  #
+  # langfuse:
+  #   image: langfuse/langfuse:latest
+  #   depends_on:
+  #     - langfuse-db
+  #   environment:
+  #     DATABASE_URL: postgres://langfuse:langfuse@langfuse-db:5432/langfuse
+  #     NEXTAUTH_SECRET: change-me
+  #     SALT: change-me
+  #     NEXTAUTH_URL: http://localhost:3001
+  #   ports:
+  #     - "3001:3000"
+
+volumes:
+  postgres_data:
+  redis_data:
+  # langfuse_db_data:
