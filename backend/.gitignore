@@ -1,0 +1,15 @@
+# Backend-specific overrides (root .gitignore already covers most of Python)
+
+# Local dev artifacts
+*.local.py
+.local/
+
+# Alembic local overrides
+alembic.local.ini
+
+# Simulation outputs
+simulation_runs/
+benchmark_results/
+
+# Cached embeddings
+.embeddings_cache/
