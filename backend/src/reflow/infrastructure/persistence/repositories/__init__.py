@@ -1,5 +1,10 @@
 """Concrete repository implementations (SQLAlchemy)."""
 
+from reflow.infrastructure.persistence.repositories.audit_repository import (
+    AuditEventView,
+    AuditRepository,
+    ChainAnchorView,
+)
 from reflow.infrastructure.persistence.repositories.event_store_repository import (
     EventStoreRepository,
     Snapshot,
@@ -10,6 +15,9 @@ from reflow.infrastructure.persistence.repositories.transaction_repository impor
 )
 
 __all__ = [
+    "AuditEventView",
+    "AuditRepository",
+    "ChainAnchorView",
     "EventStoreRepository",
     "Snapshot",
     "SqlTransactionRepository",

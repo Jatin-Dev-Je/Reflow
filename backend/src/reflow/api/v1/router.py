@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from reflow.api.v1.audit.routes import router as audit_router
 from reflow.api.v1.transactions.routes import router as transactions_router
 
 router = APIRouter(prefix="/v1")
 router.include_router(transactions_router)
+router.include_router(audit_router)
