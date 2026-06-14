@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from reflow import __version__
+from reflow.api.router import router as api_router
 from reflow.core.config import Settings, get_settings
 from reflow.core.database import dispose_engine, init_engine
 from reflow.core.middleware import RequestIdMiddleware, install_error_handlers
@@ -66,6 +67,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     install_error_handlers(app)
+
+    app.include_router(api_router, prefix=settings.api_prefix)
 
     # ---- Health endpoints ---------------------------------------------------
     @app.get("/healthz", include_in_schema=False)

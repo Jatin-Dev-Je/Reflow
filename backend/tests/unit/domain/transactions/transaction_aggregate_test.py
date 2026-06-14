@@ -17,13 +17,11 @@ from reflow.core.types import (
 )
 from reflow.domain.transactions import (
     AttemptOutcome,
-    AttemptRecorded,
     CardFunding,
     CardMetadata,
     DeclineCategory,
     DeclineInfo,
     PaymentAbandoned,
-    PaymentFailed,
     PaymentRecovered,
     Transaction,
     TransactionCreated,

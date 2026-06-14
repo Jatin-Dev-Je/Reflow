@@ -1,0 +1,10 @@
+"""v1 API router — aggregates all v1 resource routers."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter
+
+from reflow.api.v1.transactions.routes import router as transactions_router
+
+router = APIRouter(prefix="/v1")
+router.include_router(transactions_router)

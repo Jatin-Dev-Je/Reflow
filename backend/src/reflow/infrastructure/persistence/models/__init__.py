@@ -9,5 +9,15 @@ from reflow.infrastructure.persistence.models.event_store import (
     OutboxModel,
     SnapshotModel,
 )
+from reflow.infrastructure.persistence.models.transaction import (
+    AttemptModel,
+    TransactionModel,
+)
 
-__all__ = ["EventModel", "OutboxModel", "SnapshotModel"]
+__all__ = [
+    "AttemptModel",
+    "EventModel",
+    "OutboxModel",
+    "SnapshotModel",
+    "TransactionModel",
+]
