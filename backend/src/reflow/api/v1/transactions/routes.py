@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 
 from reflow.api.deps import CurrentTenant, SessionDep
 from reflow.api.v1.transactions.schemas import (
@@ -14,6 +15,7 @@ from reflow.api.v1.transactions.schemas import (
     TimelineEntry,
     TransactionRead,
     TransactionsPage,
+    TransactionStats,
 )
 from reflow.domain.transactions import (
     CardFunding,
@@ -90,6 +92,56 @@ async def list_transactions(
     return TransactionsPage(
         items=items,
         next_cursor=str(items[-1].created_at.isoformat()) if has_more and items else None,
+    )
+
+
+@router.get(
+    "/stats",
+    response_model=TransactionStats,
+    summary="Aggregate transaction stats over a recent window",
+)
+async def transaction_stats(
+    session: SessionDep,
+    tenant_id: CurrentTenant,
+    window_days: Annotated[int, Query(ge=1, le=90)] = 7,
+) -> TransactionStats:
+    end = datetime.now(UTC)
+    start = end - timedelta(days=window_days)
+
+    # Single grouped query — no N+1.
+    stmt = (
+        select(
+            TransactionModel.status,
+            TransactionModel.gateway_id,
+            func.count().label("n"),
+            func.sum(TransactionModel.amount_cents).label("amt"),
+        )
+        .where(TransactionModel.tenant_id == tenant_id)
+        .where(TransactionModel.created_at >= start)
+        .where(TransactionModel.created_at < end)
+        .group_by(TransactionModel.status, TransactionModel.gateway_id)
+    )
+    rows = (await session.execute(stmt)).all()
+
+    by_status: dict[str, int] = {}
+    by_gateway: dict[str, int] = {}
+    total = 0
+    total_amount = 0
+    for r in rows:
+        n = int(r.n)
+        by_status[r.status] = by_status.get(r.status, 0) + n
+        by_gateway[r.gateway_id] = by_gateway.get(r.gateway_id, 0) + n
+        total += n
+        total_amount += int(r.amt or 0)
+
+    avg = (total_amount // total) if total else 0
+    return TransactionStats(
+        window_days=window_days,
+        total=total,
+        total_amount_cents=total_amount,
+        by_status=by_status,
+        by_gateway=by_gateway,
+        avg_amount_cents=avg,
     )
 
 

@@ -65,3 +65,30 @@ class TimelineEntry(BaseModel):
     event_type: str
     summary: str
     payload: dict
+
+
+class TransactionStats(BaseModel):
+    """Aggregate stats for the transactions context over a window."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    window_days: int = Field(gt=0)
+    total: int = Field(ge=0)
+    total_amount_cents: int = Field(ge=0)
+    by_status: dict[str, int]
+    by_gateway: dict[str, int]
+    avg_amount_cents: int = Field(ge=0)
+
+
+class RecoveryStats(BaseModel):
+    """Aggregate stats for the recovery context over a window."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    window_days: int = Field(gt=0)
+    total: int = Field(ge=0)
+    by_state: dict[str, int]
+    by_outcome: dict[str, int]
+    recovery_rate: float = Field(ge=0, le=1)
+    avg_recovery_latency_ms: int | None = None
+    total_recovered_cents: int = Field(ge=0)

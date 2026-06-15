@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +17,7 @@ from reflow.api.v1.recoveries.schemas import (
     RecoveryRead,
     RecoveryStepRead,
 )
+from reflow.api.v1.transactions.schemas import RecoveryStats
 from reflow.application.recovery import (
     StartRecoveryChainCommand,
     StartRecoveryChainHandler,
@@ -98,6 +100,78 @@ async def _load_recovery(
             status_code=status.HTTP_404_NOT_FOUND, detail="Recovery not found"
         )
     return row
+
+
+@router.get(
+    "/stats",
+    response_model=RecoveryStats,
+    summary="Aggregate recovery stats over a recent window",
+)
+async def recovery_stats(
+    session: SessionDep,
+    tenant_id: CurrentTenant,
+    window_days: Annotated[int, Query(ge=1, le=90)] = 7,
+) -> RecoveryStats:
+    end = datetime.now(UTC)
+    start = end - timedelta(days=window_days)
+
+    # By state.
+    state_stmt = (
+        select(RecoveryModel.state, func.count().label("n"))
+        .where(RecoveryModel.tenant_id == tenant_id)
+        .where(RecoveryModel.started_at >= start)
+        .where(RecoveryModel.started_at < end)
+        .group_by(RecoveryModel.state)
+    )
+    state_rows = (await session.execute(state_stmt)).all()
+    by_state: dict[str, int] = {r.state: int(r.n) for r in state_rows}
+    total = sum(by_state.values())
+
+    # By outcome + recovered totals.
+    outcome_stmt = (
+        select(
+            func.coalesce(RecoveryModel.outcome, "in_flight").label("o"),
+            func.count().label("n"),
+            func.coalesce(
+                func.sum(RecoveryModel.recovered_amount_cents).filter(
+                    RecoveryModel.outcome == "recovered"
+                ),
+                0,
+            ).label("revenue"),
+            func.coalesce(
+                func.avg(RecoveryModel.recovery_latency_ms).filter(
+                    RecoveryModel.outcome == "recovered"
+                ),
+                None,
+            ).label("avg_latency"),
+        )
+        .where(RecoveryModel.tenant_id == tenant_id)
+        .where(RecoveryModel.started_at >= start)
+        .where(RecoveryModel.started_at < end)
+        .group_by(func.coalesce(RecoveryModel.outcome, "in_flight"))
+    )
+    outcome_rows = (await session.execute(outcome_stmt)).all()
+    by_outcome: dict[str, int] = {}
+    total_recovered_cents = 0
+    avg_latency: float | None = None
+    for r in outcome_rows:
+        by_outcome[r.o] = int(r.n)
+        if r.o == "recovered":
+            total_recovered_cents = int(r.revenue or 0)
+            avg_latency = float(r.avg_latency) if r.avg_latency is not None else None
+
+    recovered = by_outcome.get("recovered", 0)
+    recovery_rate = (recovered / total) if total else 0.0
+
+    return RecoveryStats(
+        window_days=window_days,
+        total=total,
+        by_state=by_state,
+        by_outcome=by_outcome,
+        recovery_rate=recovery_rate,
+        avg_recovery_latency_ms=int(avg_latency) if avg_latency is not None else None,
+        total_recovered_cents=total_recovered_cents,
+    )
 
 
 @router.get(
