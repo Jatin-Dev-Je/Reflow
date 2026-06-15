@@ -65,3 +65,34 @@ async def current_tenant(
 
 
 CurrentTenant = Annotated[TenantId, Depends(current_tenant)]
+
+
+# -----------------------------------------------------------------------------
+# Agent stack — built once per process; reused per request.
+# -----------------------------------------------------------------------------
+from functools import lru_cache  # noqa: E402
+
+from reflow.agents.diagnosis.agent import DiagnosisAgent  # noqa: E402
+from reflow.agents.guard.agent import GuardAgent  # noqa: E402
+from reflow.agents.llm.router import LLMRouter  # noqa: E402
+from reflow.agents.orchestrator.coordinator import RecoveryCoordinator  # noqa: E402
+from reflow.agents.risk.agent import RiskAgent  # noqa: E402
+from reflow.agents.strategy.agent import StrategyAgent  # noqa: E402
+
+
+@lru_cache(maxsize=1)
+def _build_coordinator() -> RecoveryCoordinator:
+    router = LLMRouter()
+    return RecoveryCoordinator(
+        diagnosis=DiagnosisAgent(router=router),
+        strategy=StrategyAgent(router=router),
+        risk=RiskAgent(router=router),
+        guard=GuardAgent(router=router),
+    )
+
+
+async def get_recovery_coordinator() -> RecoveryCoordinator:
+    return _build_coordinator()
+
+
+CoordinatorDep = Annotated[RecoveryCoordinator, Depends(get_recovery_coordinator)]

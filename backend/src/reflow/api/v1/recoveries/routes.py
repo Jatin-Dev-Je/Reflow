@@ -8,12 +8,20 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import desc, select
 
-from reflow.api.deps import CurrentTenant, SessionDep
+from pydantic import BaseModel, ConfigDict, Field
+
+from reflow.api.deps import CoordinatorDep, CurrentTenant, SessionDep
 from reflow.api.v1.recoveries.schemas import (
     RecoveryExecutionAttemptRead,
     RecoveryRead,
     RecoveryStepRead,
 )
+from reflow.application.recovery import (
+    StartRecoveryChainCommand,
+    StartRecoveryChainHandler,
+    StartRecoveryChainResult,
+)
+from reflow.core.types import TransactionId
 from reflow.domain.recovery import RecoveryState
 from reflow.infrastructure.persistence.models import (
     RecoveryExecutionAttemptModel,
@@ -25,6 +33,34 @@ router = APIRouter(prefix="/recoveries", tags=["recoveries"])
 
 PAGE_DEFAULT = 50
 PAGE_MAX = 200
+
+
+class StartRecoveryBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    transaction_id: TransactionId
+    attempt_number: int = Field(default=1, ge=1)
+
+
+@router.post(
+    "/start",
+    response_model=StartRecoveryChainResult,
+    summary="Run the full agent chain for a failed transaction",
+)
+async def start_recovery(
+    body: StartRecoveryBody,
+    session: SessionDep,
+    tenant_id: CurrentTenant,
+    coordinator: CoordinatorDep,
+) -> StartRecoveryChainResult:
+    handler = StartRecoveryChainHandler(session=session, coordinator=coordinator)
+    return await handler.handle(
+        StartRecoveryChainCommand(
+            tenant_id=tenant_id,
+            transaction_id=body.transaction_id,
+            attempt_number=body.attempt_number,
+        )
+    )
 
 
 @router.get(
