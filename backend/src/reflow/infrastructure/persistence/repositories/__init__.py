@@ -10,6 +10,9 @@ from reflow.infrastructure.persistence.repositories.event_store_repository impor
     Snapshot,
     StoredEvent,
 )
+from reflow.infrastructure.persistence.repositories.recovery_repository import (
+    SqlRecoveryRepository,
+)
 from reflow.infrastructure.persistence.repositories.transaction_repository import (
     SqlTransactionRepository,
 )
@@ -20,6 +23,7 @@ __all__ = [
     "ChainAnchorView",
     "EventStoreRepository",
     "Snapshot",
+    "SqlRecoveryRepository",
     "SqlTransactionRepository",
     "StoredEvent",
 ]

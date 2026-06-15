@@ -10,6 +10,11 @@ from reflow.infrastructure.persistence.models.event_store import (
     OutboxModel,
     SnapshotModel,
 )
+from reflow.infrastructure.persistence.models.recovery import (
+    RecoveryExecutionAttemptModel,
+    RecoveryModel,
+    RecoveryStepModel,
+)
 from reflow.infrastructure.persistence.models.transaction import (
     AttemptModel,
     TransactionModel,
@@ -20,6 +25,9 @@ __all__ = [
     "ChainAnchorModel",
     "EventModel",
     "OutboxModel",
+    "RecoveryExecutionAttemptModel",
+    "RecoveryModel",
+    "RecoveryStepModel",
     "SnapshotModel",
     "TransactionModel",
 ]
