@@ -14,6 +14,11 @@ from reflow.infrastructure.persistence.models.event_store import (
     OutboxModel,
     SnapshotModel,
 )
+from reflow.infrastructure.persistence.models.flags import (
+    FeatureFlagModel,
+    KillSwitchModel,
+    TenantFlagModel,
+)
 from reflow.infrastructure.persistence.models.policy import PolicyDecisionModel
 from reflow.infrastructure.persistence.models.recovery import (
     RecoveryExecutionAttemptModel,
@@ -33,6 +38,8 @@ __all__ = [
     "DiagnosisModel",
     "EventModel",
     "EvidenceItemModel",
+    "FeatureFlagModel",
+    "KillSwitchModel",
     "OutboxModel",
     "PolicyDecisionModel",
     "RecoveryExecutionAttemptModel",
@@ -41,5 +48,6 @@ __all__ = [
     "RiskAssessmentModel",
     "SnapshotModel",
     "StrategyModel",
+    "TenantFlagModel",
     "TransactionModel",
 ]
