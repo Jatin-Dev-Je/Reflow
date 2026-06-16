@@ -58,3 +58,42 @@ class ExecutiveKpis(BaseModel):
     policy_violations: int = Field(ge=0)
 
     status_breakdown: StatusBreakdown
+
+
+class OperationsCard(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    value: int
+
+
+class OperationsDashboard(BaseModel):
+    """Live operational counters — built for the ops console."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    as_of: datetime
+    pending_approvals: int = Field(ge=0)
+    recoveries_in_flight: int = Field(ge=0)
+    failures_last_hour: int = Field(ge=0)
+    recoveries_last_hour: int = Field(ge=0)
+    dead_letter_count: int = Field(ge=0)
+    active_kill_switches: list[str]
+
+
+class TrustDashboard(BaseModel):
+    """Compliance + trust signals for the Trust View board."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    as_of: datetime
+    duplicate_charges: int = Field(ge=0)
+    policy_denials_last_24h: int = Field(ge=0)
+    policy_approvals_required_last_24h: int = Field(ge=0)
+    diagnoses_with_evidence: int = Field(ge=0)
+    diagnoses_total: int = Field(ge=0)
+    evidence_coverage: float = Field(
+        ge=0, le=1, description="Fraction of diagnoses with >=1 citation."
+    )
+    audit_chain_anchors: int = Field(ge=0)
+    last_anchor_at: datetime | None = None

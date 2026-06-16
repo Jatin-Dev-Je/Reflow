@@ -226,3 +226,83 @@ async def get_recovery_executions(
     )
     rows = (await session.execute(stmt)).scalars().all()
     return [RecoveryExecutionAttemptRead.model_validate(r) for r in rows]
+
+
+# -------------------------------------------------------------- Cancel / Retry
+
+
+class CancelRecoveryBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=512)
+
+
+class RetryRecoveryBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    attempt_number: int = Field(default=2, ge=1)
+
+
+@router.post(
+    "/{recovery_id}/cancel",
+    response_model=RecoveryRead,
+    summary="Cancel an in-flight recovery (abandons it with a reason)",
+)
+async def cancel_recovery(
+    recovery_id: UUID,
+    body: CancelRecoveryBody,
+    session: SessionDep,
+    tenant_id: CurrentTenant,
+) -> RecoveryRead:
+    from reflow.core.events.event import EventMetadata
+    from reflow.core.types import RecoveryId
+    from reflow.infrastructure.persistence.repositories import SqlRecoveryRepository
+
+    repo = SqlRecoveryRepository(session)
+    recovery = await repo.load(RecoveryId(recovery_id))
+    if recovery is None or recovery.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Recovery not found"
+        )
+    if recovery.is_terminal:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Recovery already in terminal state '{recovery.state.value}'",
+        )
+
+    recovery.abandon(
+        reason=body.reason,
+        metadata=EventMetadata(source="api:recoveries.cancel"),
+    )
+    await repo.save(recovery)
+
+    row = await session.get(RecoveryModel, recovery_id)
+    return RecoveryRead.model_validate(row)
+
+
+@router.post(
+    "/{recovery_id}/retry",
+    response_model=StartRecoveryChainResult,
+    summary="Start a fresh recovery for the underlying transaction",
+)
+async def retry_recovery(
+    recovery_id: UUID,
+    body: RetryRecoveryBody,
+    session: SessionDep,
+    tenant_id: CurrentTenant,
+    coordinator: CoordinatorDep,
+) -> StartRecoveryChainResult:
+    row = await session.get(RecoveryModel, recovery_id)
+    if row is None or row.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Recovery not found"
+        )
+
+    handler = StartRecoveryChainHandler(session=session, coordinator=coordinator)
+    return await handler.handle(
+        StartRecoveryChainCommand(
+            tenant_id=tenant_id,
+            transaction_id=row.transaction_id,
+            attempt_number=body.attempt_number,
+        )
+    )

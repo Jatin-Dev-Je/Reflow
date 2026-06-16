@@ -62,10 +62,12 @@ class TestBackoff:
             )
 
     def test_attempts_clamped_around_5_minutes_max(self) -> None:
-        # Very large attempt should still produce a sane bounded delay (<=6 min).
-        next_at = _backoff_until(50)
-        delta = (next_at - datetime.now(UTC)).total_seconds()
-        assert 0 < delta <= 360.0
+        # Base is capped at 300s; jitter (+/-25%) can push the wait up to
+        # 300 * 1.25 = 375s. Sample many to assert the cap holds.
+        for _ in range(50):
+            next_at = _backoff_until(50)
+            delta = (next_at - datetime.now(UTC)).total_seconds()
+            assert 0 < delta <= 380.0
 
     def test_jitter_keeps_minimum_above_one_second(self) -> None:
         # Even at attempt 0 with negative jitter, the minimum cap should kick in.
