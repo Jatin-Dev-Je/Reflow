@@ -10,6 +10,7 @@ from reflow.api.v1.dashboard.routes import router as dashboard_router
 from reflow.api.v1.diagnosis.routes import router as agents_read_router
 from reflow.api.v1.recoveries.routes import router as recoveries_router
 from reflow.api.v1.simulation.routes import router as simulation_router
+from reflow.api.v1.system.routes import router as system_router
 from reflow.api.v1.transactions.routes import router as transactions_router
 
 router = APIRouter(prefix="/v1")
@@ -20,3 +21,4 @@ router.include_router(dashboard_router)
 router.include_router(approvals_router)
 router.include_router(simulation_router)
 router.include_router(agents_read_router)
+router.include_router(system_router)
