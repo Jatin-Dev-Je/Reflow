@@ -49,7 +49,44 @@ _DEMO_TENANT_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 async def current_tenant(
     x_tenant_id: Annotated[str | None, Header(alias="X-Tenant-Id")] = None,
+    authorization: Annotated[str | None, Header()] = None,
 ) -> TenantId:
+    """Resolve the current tenant.
+
+    Order of precedence:
+        1. Bearer JWT 'tid' claim (production path)
+        2. X-Tenant-Id header (dev / simulator)
+        3. _DEMO_TENANT_ID fallback (local dev with no auth at all)
+    """
+    if authorization and authorization.lower().startswith("bearer "):
+        # Lazy import to avoid a cycle.
+        from reflow.core.security import (
+            InvalidAuthTokenError,
+            TokenType,
+            assert_token_type,
+            decode_token,
+        )
+
+        token = authorization.split(None, 1)[1]
+        try:
+            payload = decode_token(token)
+            assert_token_type(payload, TokenType.ACCESS)
+        except InvalidAuthTokenError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
+            ) from exc
+        tid = payload.get("tid")
+        if tid:
+            try:
+                tenant_id = TenantId(UUID(tid))
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="JWT tid claim must be a UUID",
+                ) from exc
+            bind_contextvars(tenant_id=str(tenant_id), user_id=payload["sub"])
+            return tenant_id
+
     if x_tenant_id is None:
         tenant_id = TenantId(_DEMO_TENANT_ID)
     else:

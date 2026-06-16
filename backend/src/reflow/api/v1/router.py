@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from reflow.api.v1.approvals.routes import router as approvals_router
 from reflow.api.v1.audit.routes import router as audit_router
+from reflow.api.v1.auth.routes import router as auth_router
 from reflow.api.v1.dashboard.routes import router as dashboard_router
 from reflow.api.v1.diagnosis.routes import router as agents_read_router
 from reflow.api.v1.flags.routes import router as flags_router
@@ -24,3 +25,4 @@ router.include_router(simulation_router)
 router.include_router(agents_read_router)
 router.include_router(system_router)
 router.include_router(flags_router)
+router.include_router(auth_router)

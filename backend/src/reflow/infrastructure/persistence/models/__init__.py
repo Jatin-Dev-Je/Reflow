@@ -31,6 +31,10 @@ from reflow.infrastructure.persistence.models.transaction import (
     AttemptModel,
     TransactionModel,
 )
+from reflow.infrastructure.persistence.models.user import (
+    UserModel,
+    UserTenantRoleModel,
+)
 
 __all__ = [
     "AttemptModel",
@@ -50,4 +54,6 @@ __all__ = [
     "StrategyModel",
     "TenantFlagModel",
     "TransactionModel",
+    "UserModel",
+    "UserTenantRoleModel",
 ]
