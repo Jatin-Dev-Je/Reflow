@@ -24,7 +24,7 @@ Failure semantics:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -127,6 +127,10 @@ class CoordinatorResult:
     steps: list[StepRecord]
     stopped_reason: str | None = None  # why we halted before terminal success
 
+    # Raw produced artifacts the handler projects to read-model tables.
+    # Keys: 'diagnosis', 'strategy', 'risk', 'policy', 'guard'.
+    produced: dict[str, Any] = field(default_factory=dict)
+
 
 class RecoveryCoordinator:
     """Run the agent chain against a Recovery aggregate."""
@@ -153,6 +157,7 @@ class RecoveryCoordinator:
     ) -> CoordinatorResult:
         corr = correlation_id or new_correlation_id()
         steps: list[StepRecord] = []
+        produced: dict[str, Any] = {}
 
         # ----------------------------------------------------------- DIAGNOSIS
         try:
@@ -172,6 +177,11 @@ class RecoveryCoordinator:
             metadata=self._meta(corr, "agent:diagnosis"),
         )
         steps.append(_step("diagnosis", diagnosis_id, diag.telemetry))
+        produced["diagnosis"] = {
+            "id": diagnosis_id,
+            "output": diag.output,
+            "telemetry": diag.telemetry,
+        }
 
         if not diag.output.is_recoverable:
             recovery.abandon(
@@ -182,6 +192,7 @@ class RecoveryCoordinator:
                 final_state=recovery.state,
                 steps=steps,
                 stopped_reason="not_recoverable",
+                produced=produced,
             )
 
         # ------------------------------------------------------------ STRATEGY
@@ -206,6 +217,11 @@ class RecoveryCoordinator:
             metadata=self._meta(corr, "agent:strategy"),
         )
         steps.append(_step("strategy", strategy_id, strat.telemetry))
+        produced["strategy"] = {
+            "id": strategy_id,
+            "output": strat.output,
+            "telemetry": strat.telemetry,
+        }
 
         # ---------------------------------------------------------------- RISK
         try:
@@ -224,6 +240,11 @@ class RecoveryCoordinator:
             metadata=self._meta(corr, "agent:risk"),
         )
         steps.append(_step("risk", risk_assessment_id, risk.telemetry))
+        produced["risk"] = {
+            "id": risk_assessment_id,
+            "output": risk.output,
+            "telemetry": risk.telemetry,
+        }
 
         # ------------------------------------------------------------- POLICY
         policy_ctx = self._build_policy_context(recovery, ctx, strat.output, risk.output)
@@ -251,18 +272,24 @@ class RecoveryCoordinator:
                 },
             )
         )
+        produced["policy"] = {
+            "id": policy_decision_id,
+            "decision": policy_decision,
+        }
 
         if policy_decision.outcome == PolicyOutcome.DENY:
             return CoordinatorResult(
                 final_state=recovery.state,
                 steps=steps,
                 stopped_reason="policy_denied",
+                produced=produced,
             )
         if policy_decision.outcome == PolicyOutcome.REQUIRE_APPROVAL:
             return CoordinatorResult(
                 final_state=recovery.state,
                 steps=steps,
                 stopped_reason="awaiting_approval",
+                produced=produced,
             )
 
         # -------------------------------------------------------------- GUARD
@@ -287,6 +314,7 @@ class RecoveryCoordinator:
             return self._fail(recovery, steps, "guard_failed", str(exc))
 
         steps.append(_step("guard", None, guard.telemetry))
+        produced["guard"] = {"output": guard.output, "telemetry": guard.telemetry}
 
         if guard.output.outcome == GuardOutcome.BLOCK:
             recovery.fail(
@@ -297,12 +325,14 @@ class RecoveryCoordinator:
                 final_state=recovery.state,
                 steps=steps,
                 stopped_reason="guard_blocked",
+                produced=produced,
             )
         if guard.output.outcome == GuardOutcome.HOLD:
             return CoordinatorResult(
                 final_state=recovery.state,
                 steps=steps,
                 stopped_reason="guard_hold",
+                produced=produced,
             )
 
         # ----------------------------------------------------- READY TO EXECUTE
@@ -313,6 +343,7 @@ class RecoveryCoordinator:
             final_state=recovery.state,
             steps=steps,
             stopped_reason="ready_to_execute",
+            produced=produced,
         )
 
     # ------------------------------------------------------------------ helpers

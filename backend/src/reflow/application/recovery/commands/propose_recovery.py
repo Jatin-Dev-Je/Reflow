@@ -38,6 +38,9 @@ from reflow.infrastructure.persistence.models import (
     AttemptModel,
     TransactionModel,
 )
+from reflow.infrastructure.persistence.projections.agent_outputs import (
+    project_chain_outputs,
+)
 from reflow.infrastructure.persistence.repositories import SqlRecoveryRepository
 
 _logger = get_logger(__name__)
@@ -69,6 +72,19 @@ class StartRecoveryChainHandler:
 
         result = await self.coordinator.run_full(recovery=recovery, ctx=ctx)
         await repo.save(recovery)
+
+        # Project agent outputs into read-model tables so the UI can list them.
+        if result.produced and latest_attempt is not None:
+            from reflow.core.types import AttemptId
+
+            await project_chain_outputs(
+                self.session,
+                tenant_id=cmd.tenant_id,
+                transaction_id=cmd.transaction_id,
+                attempt_id=AttemptId(latest_attempt.id),
+                recovery_id=recovery.id,
+                produced=result.produced,
+            )
 
         _logger.info(
             "recovery.chain.completed",
