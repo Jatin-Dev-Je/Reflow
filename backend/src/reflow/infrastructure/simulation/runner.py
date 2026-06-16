@@ -59,6 +59,87 @@ class SimulationResult:
     success_lift_pp: float
 
 
+def _to_ingest_command(spec, tenant_id: TenantId) -> IngestPaymentAttemptCommand:
+    return IngestPaymentAttemptCommand(
+        command_id=new_command_id(),
+        tenant_id=tenant_id,
+        external_id=spec.external_id,
+        transaction_seed=TransactionSeed(
+            amount_cents=spec.amount_cents,
+            currency=spec.currency,
+            card=CardMetadata(
+                bin=spec.card_bin,
+                last4="0000",
+                brand="visa",
+                funding=CardFunding.CREDIT,
+                country="US",
+            ),
+            gateway_provider=spec.gateway_provider,
+        ),
+        outcome=(
+            AttemptOutcome.SOFT_DECLINE
+            if spec.is_soft_decline
+            else AttemptOutcome.HARD_DECLINE
+        ),
+        decline=DeclineInfo(
+            code_raw=spec.decline_code_normalized.lower(),
+            code_normalized=spec.decline_code_normalized,
+            category=DeclineCategory(spec.decline_category),
+        ),
+    )
+
+
+async def run_with_recovery(
+    *,
+    session: AsyncSession,
+    tenant_id: TenantId,
+    count: int,
+    seed: int,
+) -> SimulationResult:
+    """Ingest synthetic failures AND run mock-agent recovery chain on each.
+
+    Uses mock agents (no LLM calls) so it's deterministic, free, and fast.
+    Every failure goes through the full Diagnosis -> Strategy -> Risk ->
+    Policy -> Guard chain, producing diagnosis / strategy / risk /
+    policy_decision rows in the read model.
+    """
+    from reflow.application.recovery import (
+        StartRecoveryChainCommand,
+        StartRecoveryChainHandler,
+    )
+    from reflow.infrastructure.simulation.mock_agents import build_mock_coordinator
+
+    ingest = IngestPaymentAttemptHandler(session=session)
+    coordinator = build_mock_coordinator()
+    recovery_handler = StartRecoveryChainHandler(
+        session=session, coordinator=coordinator
+    )
+
+    failures = 0
+    for spec in generate_failures(count=count, seed=seed):
+        cmd = _to_ingest_command(spec, tenant_id)
+        ingest_result = await ingest.handle(cmd)
+        failures += 1
+
+        if ingest_result.status in {"failed", "recovering"}:
+            await recovery_handler.handle(
+                StartRecoveryChainCommand(
+                    tenant_id=tenant_id,
+                    transaction_id=ingest_result.transaction_id,
+                    attempt_number=1,
+                )
+            )
+
+    await session.commit()
+
+    return await _summarize(
+        session=session,
+        tenant_id=tenant_id,
+        seed=seed,
+        failures_ingested=failures,
+    )
+
+
 async def run_ingest_only(
     *,
     session: AsyncSession,
@@ -72,34 +153,7 @@ async def run_ingest_only(
 
     failures = 0
     for spec in generate_failures(count=count, seed=seed):
-        cmd = IngestPaymentAttemptCommand(
-            command_id=new_command_id(),
-            tenant_id=tenant_id,
-            external_id=spec.external_id,
-            transaction_seed=TransactionSeed(
-                amount_cents=spec.amount_cents,
-                currency=spec.currency,
-                card=CardMetadata(
-                    bin=spec.card_bin,
-                    last4="0000",
-                    brand="visa",
-                    funding=CardFunding.CREDIT,
-                    country="US",
-                ),
-                gateway_provider=spec.gateway_provider,
-            ),
-            outcome=(
-                AttemptOutcome.SOFT_DECLINE
-                if spec.is_soft_decline
-                else AttemptOutcome.HARD_DECLINE
-            ),
-            decline=DeclineInfo(
-                code_raw=spec.decline_code_normalized.lower(),
-                code_normalized=spec.decline_code_normalized,
-                category=DeclineCategory(spec.decline_category),
-            ),
-        )
-        await handler.handle(cmd)
+        await handler.handle(_to_ingest_command(spec, tenant_id))
         failures += 1
 
     await session.commit()
