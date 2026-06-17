@@ -10,6 +10,7 @@ from reflow.api.v1.auth.routes import router as auth_router
 from reflow.api.v1.dashboard.routes import router as dashboard_router
 from reflow.api.v1.diagnosis.routes import router as agents_read_router
 from reflow.api.v1.flags.routes import router as flags_router
+from reflow.api.v1.policies.routes import router as policies_router
 from reflow.api.v1.recoveries.routes import router as recoveries_router
 from reflow.api.v1.simulation.routes import router as simulation_router
 from reflow.api.v1.system.routes import router as system_router
@@ -26,3 +27,4 @@ router.include_router(agents_read_router)
 router.include_router(system_router)
 router.include_router(flags_router)
 router.include_router(auth_router)
+router.include_router(policies_router)

@@ -19,7 +19,11 @@ from reflow.infrastructure.persistence.models.flags import (
     KillSwitchModel,
     TenantFlagModel,
 )
-from reflow.infrastructure.persistence.models.policy import PolicyDecisionModel
+from reflow.infrastructure.persistence.models.policy import (
+    PolicyDecisionModel,
+    PolicyModel,
+    PolicyVersionModel,
+)
 from reflow.infrastructure.persistence.models.recovery import (
     RecoveryExecutionAttemptModel,
     RecoveryModel,
@@ -46,6 +50,8 @@ __all__ = [
     "KillSwitchModel",
     "OutboxModel",
     "PolicyDecisionModel",
+    "PolicyModel",
+    "PolicyVersionModel",
     "RecoveryExecutionAttemptModel",
     "RecoveryModel",
     "RecoveryStepModel",
