@@ -34,6 +34,7 @@ from reflow.core.types import (
     TransactionId,
 )
 from reflow.infrastructure.persistence.models import (
+    AgentRunModel,
     DiagnosisModel,
     EvidenceItemModel,
     PolicyDecisionModel,
@@ -58,6 +59,18 @@ async def project_chain_outputs(
     Missing keys are skipped — partial chains (e.g. halted at policy_denied)
     produce only the artifacts that ran.
     """
+    # Persist obs.agent_runs for every produced agent before the rest.
+    for kind in ("diagnosis", "strategy", "risk", "guard"):
+        artifact = produced.get(kind)
+        if artifact and "telemetry" in artifact:
+            await _project_agent_run(
+                session,
+                tenant_id=tenant_id,
+                transaction_id=transaction_id,
+                recovery_id=recovery_id,
+                telemetry=artifact["telemetry"],
+            )
+
     if "diagnosis" in produced:
         await _project_diagnosis(
             session,
@@ -91,6 +104,42 @@ async def project_chain_outputs(
             recovery_id=recovery_id,
             strategy_id=produced.get("strategy", {}).get("id"),
         )
+
+
+async def _project_agent_run(
+    session: AsyncSession,
+    *,
+    tenant_id: TenantId,
+    transaction_id: TransactionId,
+    recovery_id: RecoveryId,
+    telemetry,
+) -> None:
+    """Persist one obs.agent_runs row from an AgentTelemetry instance.
+
+    Idempotent on agent_run_id — re-running the same chain inserts nothing.
+    """
+    status_str = "succeeded" if telemetry.succeeded else "failed"
+    stmt = pg_insert(AgentRunModel).values(
+        id=telemetry.agent_run_id,
+        tenant_id=tenant_id,
+        agent_name=telemetry.agent_name,
+        agent_version=telemetry.agent_version,
+        recovery_id=recovery_id,
+        transaction_id=transaction_id,
+        status=status_str,
+        input={"summary": "captured at step time"},  # rich input stored elsewhere
+        output=None,
+        error={"message": telemetry.error} if telemetry.error else None,
+        total_cost_usd=telemetry.total_cost_usd,
+        total_tokens_in=telemetry.total_tokens_in,
+        total_tokens_out=telemetry.total_tokens_out,
+        total_calls=max(len(telemetry.provider_chain), 1),
+        started_at=telemetry.started_at,
+        completed_at=telemetry.completed_at,
+        latency_ms=telemetry.total_latency_ms,
+    )
+    stmt = stmt.on_conflict_do_nothing(index_elements=[AgentRunModel.id])
+    await session.execute(stmt)
 
 
 async def _project_diagnosis(
