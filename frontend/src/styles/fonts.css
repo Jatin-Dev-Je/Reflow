@@ -1,0 +1,11 @@
+/**
+ * Self-hosted fonts via @fontsource — no Google Fonts CDN dependency.
+ * Imported here once; tailwind.config.ts maps them to font-sans / font-display / font-mono.
+ */
+
+@import "@fontsource-variable/inter/index.css";
+@import "@fontsource-variable/fraunces/index.css";
+
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";

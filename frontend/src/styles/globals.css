@@ -1,0 +1,133 @@
+/**
+ * Vellum design tokens.
+ *
+ * Every brand colour lives here as an HSL triplet (no `hsl(...)` wrapper) so
+ * that Tailwind can compose them with opacity modifiers like
+ *   text-primary/60   →   hsl(var(--primary) / 0.6)
+ *
+ * Light theme is the default.  Dark theme inverts via the `.dark` class on
+ * <html>, applied by the theme-store.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "./fonts.css";
+@import "./animations.css";
+
+@layer base {
+  :root {
+    /* ── Surfaces ───────────────────────────────────────────────────── */
+    --page:          36 19% 97%;     /* #FAF9F7  warm vellum */
+    --card:          0  0%  100%;
+    --card-hover:    36 22% 93%;     /* #F4F1EB  warm shift */
+    --inset:         38 21% 92%;     /* #F0EDE6 */
+
+    --border:        36 20% 88%;     /* #E8E4DD */
+    --border-strong: 36 13% 78%;     /* #C9C2B5 */
+    --input:         36 20% 88%;
+    --ring:          157 35% 27%;
+
+    /* ── Text ────────────────────────────────────────────────────────── */
+    --text-primary:   30 6%  11%;    /* #1F1D1A  warm charcoal */
+    --text-secondary: 36 6%  32%;
+    --text-tertiary:  36 6%  51%;
+
+    /* ── Brand ──────────────────────────────────────────────────────── */
+    --primary:            157 35% 27%;     /* #2E5D4F  deep forest */
+    --primary-hover:      157 38% 23%;
+    --primary-surface:    157 18% 94%;
+    --primary-foreground: 36 19% 97%;
+
+    /* ── Citation ───────────────────────────────────────────────────── */
+    --citation:         13 49% 55%;        /* #C46A52  terracotta */
+    --citation-surface: 13 49% 95%;
+
+    /* ── Semantic ───────────────────────────────────────────────────── */
+    --success:            141 26% 48%;
+    --success-surface:    141 24% 92%;
+    --success-foreground: 36 19% 97%;
+
+    --warning:            41 60% 53%;
+    --warning-surface:    41 60% 93%;
+    --warning-foreground: 30 6%  11%;
+
+    --danger:             2  39% 52%;
+    --danger-surface:     2  39% 93%;
+    --danger-foreground:  36 19% 97%;
+
+    --info:               212 24% 48%;
+    --info-surface:       212 24% 93%;
+    --info-foreground:    36 19% 97%;
+  }
+
+  .dark {
+    --page:          30 14% 9%;
+    --card:          30 12% 12%;
+    --card-hover:    30 12% 16%;
+    --inset:         30 12% 14%;
+
+    --border:        30 9%  20%;
+    --border-strong: 30 9%  28%;
+    --input:         30 9%  20%;
+    --ring:          150 18% 50%;
+
+    --text-primary:   36 22% 91%;
+    --text-secondary: 36 9%  64%;
+    --text-tertiary:  36 6%  44%;
+
+    --primary:            150 18% 50%;     /* lifted forest for dark */
+    --primary-hover:      150 18% 56%;
+    --primary-surface:    150 15% 18%;
+    --primary-foreground: 30 14% 9%;
+
+    --citation:         18 64% 64%;        /* brightened terracotta */
+    --citation-surface: 18 30% 22%;
+
+    --success:            141 30% 55%;
+    --success-surface:    141 20% 18%;
+    --success-foreground: 30 14% 9%;
+
+    --warning:            41 65% 60%;
+    --warning-surface:    41 30% 18%;
+    --warning-foreground: 30 14% 9%;
+
+    --danger:             2  55% 62%;
+    --danger-surface:     2  30% 18%;
+    --danger-foreground:  30 14% 9%;
+
+    --info:               212 35% 60%;
+    --info-surface:       212 30% 18%;
+    --info-foreground:    30 14% 9%;
+  }
+}
+
+@layer base {
+  html {
+    font-feature-settings: "ss01", "cv11";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-page text-foreground font-sans text-body antialiased;
+  }
+
+  ::selection {
+    background-color: hsl(var(--citation-surface));
+    color: hsl(var(--citation));
+  }
+
+  *:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px hsl(var(--page)),
+      0 0 0 4px hsl(var(--primary) / 0.36);
+    border-radius: 6px;
+  }
+
+  code, pre, kbd, samp {
+    @apply font-mono text-code;
+  }
+}

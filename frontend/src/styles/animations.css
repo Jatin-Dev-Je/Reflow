@@ -1,0 +1,25 @@
+/**
+ * Custom keyframes shared across components.
+ * Reusable Tailwind animations are registered in tailwind.config.ts.
+ * Anything bespoke (e.g. skeleton shimmer) lives here.
+ */
+
+@keyframes vellum-shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.vellum-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--inset)) 0%,
+    hsl(var(--card-hover)) 50%,
+    hsl(var(--inset)) 100%
+  );
+  background-size: 200% 100%;
+  animation: vellum-shimmer 1.5s ease-in-out infinite;
+}

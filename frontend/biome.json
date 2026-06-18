@@ -1,0 +1,92 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "ignore": [
+      "dist",
+      "node_modules",
+      "coverage",
+      "src/api/generated",
+      "*.config.*"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useImportType": "error",
+        "useExportType": "error",
+        "useNodejsImportProtocol": "error",
+        "useTemplate": "warn",
+        "useConst": "error",
+        "useNamingConvention": {
+          "level": "off"
+        }
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "warn",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "noUnusedFunctionParameters": "warn"
+      },
+      "suspicious": {
+        "noConsoleLog": "warn",
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn"
+      },
+      "complexity": {
+        "noBannedTypes": "error",
+        "noUselessFragments": "warn"
+      },
+      "performance": {
+        "noAccumulatingSpread": "warn"
+      },
+      "a11y": {
+        "recommended": true
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true,
+      "jsxQuoteStyle": "double"
+    }
+  },
+  "json": {
+    "formatter": {
+      "indentWidth": 2,
+      "lineWidth": 100,
+      "trailingCommas": "none"
+    }
+  },
+  "overrides": [
+    {
+      "include": ["src/test/**", "tests/**", "**/*.test.tsx", "**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noExplicitAny": "off", "noConsoleLog": "off" }
+        }
+      }
+    }
+  ]
+}
