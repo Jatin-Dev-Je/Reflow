@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { LoginPage } from "@/features/auth/pages/login-page";
+import { RegisterPage } from "@/features/auth/pages/register-page";
 import * as routes from "@/lib/constants/routes";
 
 /**
@@ -21,6 +22,10 @@ export const router = createBrowserRouter([
   {
     path: routes.LOGIN,
     element: <LoginPage />,
+  },
+  {
+    path: routes.REGISTER,
+    element: <RegisterPage />,
   },
   // Catch-all → /login (replaced with a real NotFound page later).
   {
