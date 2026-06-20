@@ -1,12 +1,18 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { ApprovalsQueuePage } from "@/features/approvals/pages/approvals-queue-page";
 import { ForgotPasswordPage } from "@/features/auth/pages/forgot-password-page";
 import { LoginPage } from "@/features/auth/pages/login-page";
 import { RegisterPage } from "@/features/auth/pages/register-page";
 import { ExecutivePage } from "@/features/dashboard/pages/executive-page";
 import { OperationsPage } from "@/features/dashboard/pages/operations-page";
 import { TrustPage } from "@/features/dashboard/pages/trust-page";
+import { DiagnosesListPage } from "@/features/diagnoses/pages/diagnoses-list-page";
+import { LandingPage } from "@/features/marketing/pages/landing-page";
+import { PoliciesListPage } from "@/features/policies/pages/policies-list-page";
+import { RecoveriesListPage } from "@/features/recoveries/pages/recoveries-list-page";
+import { RecoveryDetailPage } from "@/features/recoveries/pages/recovery-detail-page";
 import { TransactionsListPage } from "@/features/transactions/pages/transactions-list-page";
 import { TrustViewPage } from "@/features/transactions/pages/trust-view-page";
 import * as routes from "@/lib/constants/routes";
@@ -14,22 +20,20 @@ import * as routes from "@/lib/constants/routes";
 /**
  * Declarative route tree.
  *
- * /app/* routes share the AppShell layout (sidebar + topbar + outlet).
- * Public + auth routes have their own shells, mounted at the top level.
+ * - HOME → public landing page (marketing)
+ * - /login, /register, /forgot-password → auth shells
+ * - /app/* → authenticated AppShell (sidebar + topbar + outlet)
  */
 export const router = createBrowserRouter([
-  // ── Public root ─────────────────────────────────────────────────────────
-  {
-    path: routes.HOME,
-    element: <Navigate to={routes.DASHBOARD_EXECUTIVE} replace />,
-  },
+  // ── Public ──────────────────────────────────────────────────────────────
+  { path: routes.HOME, element: <LandingPage /> },
 
   // ── Auth ────────────────────────────────────────────────────────────────
   { path: routes.LOGIN, element: <LoginPage /> },
   { path: routes.REGISTER, element: <RegisterPage /> },
   { path: routes.FORGOT_PASSWORD, element: <ForgotPasswordPage /> },
 
-  // ── Authenticated app — wrapped in AppShell ─────────────────────────────
+  // ── Authenticated app ───────────────────────────────────────────────────
   {
     element: <AppShell />,
     children: [
@@ -43,13 +47,21 @@ export const router = createBrowserRouter([
       { path: "/app/transactions/:id", element: <TrustViewPage /> },
       { path: "/app/transactions/:id/timeline", element: <TrustViewPage /> },
 
-      // Placeholders for screens we haven't built yet — render the
-      // executive dashboard so the sidebar nav still works.
-      { path: routes.RECOVERIES, element: <ExecutivePage /> },
-      { path: routes.APPROVALS, element: <ExecutivePage /> },
+      // Recoveries
+      { path: routes.RECOVERIES, element: <RecoveriesListPage /> },
+      { path: "/app/recoveries/:id", element: <RecoveryDetailPage /> },
+
+      // Approvals
+      { path: routes.APPROVALS, element: <ApprovalsQueuePage /> },
+
+      // Agents
+      { path: routes.DIAGNOSES, element: <DiagnosesListPage /> },
+
+      // Policies
+      { path: routes.POLICIES, element: <PoliciesListPage /> },
+
+      // Placeholders — render executive dashboard so the sidebar still works.
       { path: routes.SIMULATIONS, element: <ExecutivePage /> },
-      { path: routes.DIAGNOSES, element: <ExecutivePage /> },
-      { path: routes.POLICIES, element: <ExecutivePage /> },
       { path: routes.AGENT_RUNS, element: <ExecutivePage /> },
       { path: routes.AUDIT_EVENTS, element: <ExecutivePage /> },
       { path: routes.HEALTH_GATEWAYS, element: <ExecutivePage /> },
@@ -59,6 +71,6 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Catch-all → executive dashboard.
-  { path: "*", element: <Navigate to={routes.DASHBOARD_EXECUTIVE} replace /> },
+  // Catch-all → landing.
+  { path: "*", element: <Navigate to={routes.HOME} replace /> },
 ]);
